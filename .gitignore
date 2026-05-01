@@ -1,0 +1,36 @@
+# Terraform local state and provider binaries
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Crash files
+crash.log
+crash.*.log
+
+# Exclude override files, as they are often used to override resources locally and so are
+# ignored in VCS.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc
+
+# Plan files
+*.tfplan
