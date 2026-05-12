@@ -1,6 +1,6 @@
 # Terraform local state and provider binaries
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl is committed for reproducible provider versions
 terraform.tfstate
 terraform.tfstate.*
 *.tfstate

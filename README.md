@@ -63,6 +63,61 @@ terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
+## CI/CD — GitHub Actions
+
+A workflow is provided at `.github/workflows/deploy-infra.yml` that:
+
+1. **Validates** — `terraform fmt`, `init`, `validate` on every PR/push
+2. **Plans** — `terraform plan` with Azure OIDC authentication
+3. **Applies** — `terraform apply` on push to `main` (requires environment approval)
+
+### GitHub Secrets (sensitive)
+
+| Secret | Purpose |
+|--------|---------|
+| `TFE_TOKEN` | Terraform Cloud API token (for remote state) |
+| `AZURE_CLIENT_ID` | Service principal client ID (OIDC federated credential) |
+| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+
+### GitHub Variables (non-sensitive)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TF_CLOUD_ORGANIZATION` | — | Terraform Cloud organization name |
+| `TF_CLOUD_WORKSPACE` | `digital-wallet-iac` | Terraform Cloud workspace name |
+| `TF_RESOURCE_PREFIX` | `dw` | Terraform `resource_prefix` var |
+| `TF_RESOURCE_GROUP_NAME` | `digital-wallet-rg` | Terraform `resource_group_name` var |
+| `TF_LOCATION` | `eastus` | Terraform `location` var |
+| `TF_ENVIRONMENT` | `dev` | GitHub environment name |
+
+### Setting up OIDC Federated Credentials
+
+1. Create an Azure service principal:
+   ```powershell
+   az ad sp create-for-rbac --name "github-actions-digital-wallet" `
+     --role Contributor `
+     --json-auth false
+   ```
+2. Note the `clientId`, `tenantId`, and `subscriptionId`.
+3. In the Azure portal, go to your App Registration → **Certificates & secrets** → **Federated credentials**.
+4. Add a credential for GitHub Actions:
+   - **Entity type**: `Environment`
+   - **GitHub org**: your GitHub org/user
+   - **Repository**: `digital-wallet-iac`
+   - **Environment**: `dev`
+   - **Name**: `github-actions-dev`
+5. Repeat for a `production` environment if needed.
+
+### Setting up Terraform Cloud
+
+1. Create a free account at [app.terraform.io](https://app.terraform.io)
+2. Create an organization and note the name
+3. Generate a **Team API token** (Settings → Teams → Create token)
+4. Add the token as `TFE_TOKEN` in GitHub Secrets
+5. Add the organization name as `TF_CLOUD_ORGANIZATION` in GitHub Variables
+6. The workspace (`digital-wallet-iac`) is created automatically on first `terraform init`
+
 ## Limitations
 
 - **App Service F1**: 60 CPU min/day quota. Cold start ~30–60s. No always-on — app goes idle after ~20 min.
