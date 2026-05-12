@@ -60,7 +60,6 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
-          terraform_token: ${{ secrets.TFE_TOKEN }}
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -71,11 +70,12 @@ jobs:
 
       - name: Terraform init (Terraform Cloud)
         run: |
-          cat > backend.tfbackend <<EOF
+          cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
           workspaces {
             name = "${{ env.TF_CLOUD_WORKSPACE }}"
           }
+          token = "${{ secrets.TFE_TOKEN }}"
           EOF
           terraform init -backend-config=backend.tfbackend
 
@@ -94,7 +94,6 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
-          terraform_token: ${{ secrets.TFE_TOKEN }}
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -105,11 +104,12 @@ jobs:
 
       - name: Terraform init (Terraform Cloud)
         run: |
-          cat > backend.tfbackend <<EOF
+          cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
           workspaces {
             name = "${{ env.TF_CLOUD_WORKSPACE }}"
           }
+          token = "${{ secrets.TFE_TOKEN }}"
           EOF
           terraform init -backend-config=backend.tfbackend
 
