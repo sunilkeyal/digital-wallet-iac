@@ -1,4 +1,11 @@
 provider "azurerm" {
-  features {}
-  subscription_id = "0ebe7661-7a3a-4632-bd5e-0bed8e7154af"
+  features {
+    key_vault {
+      purge_soft_delete_on_destroy    = true
+      recover_soft_deleted_key_vaults = true
+    }
+  }
+}
+
+provider "random" {
 }

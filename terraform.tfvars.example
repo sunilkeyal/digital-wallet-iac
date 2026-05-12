@@ -1,8 +1,22 @@
 # Example Terraform variables for the digital wallet Azure infrastructure
-resource_prefix = "digitalwallet"
-resource_group_name = "digital-wallet-rg"
-location = "eastus"
-app_service_plan_sku = "B1"
-frontend_index_document = "index.html"
-frontend_error_document = "index.html"
-backend_port = 8080
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored to prevent leaking secrets.
+
+resource_prefix               = "digitalwallet"
+resource_group_name           = "digital-wallet-rg"
+location                      = "eastus"
+app_service_plan_sku          = "S1"
+frontend_index_document       = "index.html"
+frontend_error_document       = "index.html"
+backend_port                  = 8080
+vnet_address_space            = "10.0.0.0/16"
+subnet_private_endpoints_prefix = "10.0.1.0/24"
+subnet_appservice_prefix      = "10.0.2.0/24"
+log_analytics_sku             = "PerGB2018"
+
+# Optional additional tags
+# tags = {
+#   owner        = "team@example.com"
+#   cost-center  = "12345"
+#   environment  = "production"
+# }

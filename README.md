@@ -1,91 +1,110 @@
 # digital-wallet-iac
 
-This folder contains Terraform infrastructure for deploying the Digital Wallet UI and backend to Azure.
+Terraform infrastructure for deploying the Digital Wallet application to Azure.
 
-## What is included
+## Architecture
 
-- Azure Resource Group
-- Azure Storage Account with static website hosting for the UI
-- Azure Cosmos DB account configured for MongoDB API
-- Azure Cosmos DB Mongo database
-- Azure App Service Plan for the backend
-- Azure Linux App Service running Java 21 for the backend
+```
+┌─────────────────────────────────────────────────┐
+│  Storage Account (static website)                │
+│  → React UI (publicly accessible)               │
+├─────────────────────────────────────────────────┤
+│  App Service (Linux, Java 21)                    │
+│  → Spring Boot backend                           │
+│  → VNet integration for private egress           │
+├─────────────────────────────────────────────────┤
+│  Cosmos DB (MongoDB API)                         │
+│  → Private endpoint (no public access)           │
+├─────────────────────────────────────────────────┤
+│  Monitoring                                      │
+│  → Log Analytics + Application Insights          │
+│  → Diagnostic settings on all resources          │
+└─────────────────────────────────────────────────┘
+```
 
-## Terraform file structure
+## Resources
 
-- `main.tf` - shared configuration, common locals, random name suffix, and resource group definition.
-- `storage.tf` - frontend storage account and static website configuration for the UI.
-- `cosmos.tf` - Cosmos DB account and Mongo database resources.
-- `appservice.tf` - App Service Plan and backend App Service definition.
-- `providers.tf` - Terraform Azure provider configuration.
-- `variables.tf` - input variables required for deployment.
-- `outputs.tf` - useful outputs such as the static website URL and backend app URL.
+- **Resource Group** — container for all resources
+- **Virtual Network** — `10.0.0.0/16` with subnets for private endpoints and App Service
+- **Storage Account** — static website hosting for the React UI (HTTPS-only, TLS 1.2)
+- **Cosmos DB** — MongoDB API, private endpoint, public access disabled, bounded staleness consistency
+- **App Service Plan** — Linux, S1+ (Standard required for VNet integration)
+- **App Service** — Java 21 Spring Boot, VNet-integrated for private outbound traffic
+- **Private Endpoint** — Cosmos DB accessible only via private IP
+- **Log Analytics** — centralized logs and metrics
+- **Application Insights** — application performance monitoring
+- **Diagnostic Settings** — streaming logs/metrics from App Service, Cosmos DB, Storage
+
+## File structure
+
+| File | Purpose |
+|------|---------|
+| `main.tf` | Locals, random suffix, resource group |
+| `providers.tf` | Azure provider (no hardcoded subscription) |
+| `versions.tf` | Terraform version, provider pins, remote state docs |
+| `variables.tf` | All input variables with defaults and validations |
+| `network.tf` | VNet, subnets, private endpoints, DNS zones |
+| `storage.tf` | Frontend storage account with static website |
+| `cosmos.tf` | Cosmos DB account with MongoDB API |
+| `appservice.tf` | App Service plan + Linux web app + VNet integration |
+| `monitor.tf` | Log Analytics, Application Insights, diagnostics |
+| `outputs.tf` | URLs, names, and monitoring connection strings |
 
 ## Usage
 
-1. Change into the IAC folder:
+```powershell
+cd digital-wallet-iac
 
-   ```powershell
-   cd digital-wallet-iac
-   ```
+# Copy and edit your variables
+cp terraform.tfvars.example terraform.tfvars
+# (terraform.tfvars is gitignored — secrets stay local)
 
-2. Initialize Terraform:
-
-   ```powershell
-   terraform init
-   ```
-
-3. Validate the configuration:
-
-   ```powershell
-   terraform validate
-   ```
-
-4. Format the files (optional):
-
-   ```powershell
-   terraform fmt -recursive
-   ```
-
-5. Apply the configuration:
-
-   ```powershell
-   terraform apply
-   ```
-
-   Or customize values with:
-
-   ```powershell
-   terraform apply -var="resource_group_name=digital-wallet-rg" -var="location=eastus"
-   ```
-
-6. After apply completes, Terraform will output the UI website URL and backend app URL.
-
-## Sample terraform.tfvars
-
-Create a `terraform.tfvars` file in the same folder to provide values for the deployment:
-
-```hcl
-resource_group_name = "digital-wallet-rg"
-location            = "eastus"
-resource_prefix     = "dw"
-frontend_index_document = "index.html"
-frontend_error_document = "404.html"
-backend_port        = 8080
-app_service_plan_sku = "B1"
+terraform init
+terraform validate
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
-> Adjust `resource_prefix` and `location` to match your Azure naming and region preferences.
+## Remote State (recommended for teams)
 
-## Deploying the applications
+By default, state is stored locally. To enable remote state in Azure Storage:
 
-- Build and publish the UI assets, then upload them to the Storage Account static website container.
-- Deploy the backend JAR to the App Service, for example via Azure CLI, GitHub Actions, or Azure DevOps.
+```powershell
+# 1. Create the state storage manually
+az group create -n digital-wallet-tfstate -l eastus
+az storage account create -n <unique-name> -g digital-wallet-tfstate -l eastus --sku Standard_LRS
+az storage container create -n tfstate --account-name <unique-name>
 
-## Notes
+# 2. Uncomment the backend block in versions.tf and set your account name
 
-- `storage.tf` defines the Azure Storage Account with static website hosting.
-- `cosmos.tf` defines the Cosmos DB account and MongoDB database used by the backend.
-- `appservice.tf` defines the App Service Plan and the Java-based backend App Service.
-- The backend app settings include the Cosmos DB MongoDB connection string and database name.
-- The UI static website uses `index.html` as the default document and should be published as a static site.
+# 3. Migrate
+terraform init -migrate
+```
+
+## Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `resource_prefix` | `digitalwallet` | Prefix for all resource names |
+| `resource_group_name` | `digital-wallet-rg` | Azure resource group |
+| `location` | `eastus` | Azure region |
+| `app_service_plan_sku` | `S1` | App Service SKU (S1+ for VNet) |
+| `frontend_index_document` | `index.html` | Static site index |
+| `frontend_error_document` | `index.html` | SPA 404 fallback |
+| `backend_port` | `8080` | Spring Boot port |
+| `vnet_address_space` | `10.0.0.0/16` | VNet CIDR |
+| `subnet_private_endpoints_prefix` | `10.0.1.0/24` | PE subnet |
+| `subnet_appservice_prefix` | `10.0.2.0/24` | App Service subnet |
+| `log_analytics_sku` | `PerGB2018` | Log Analytics tier |
+| `tags` | `{}` | Extra tags merged into all resources |
+
+## Deploying applications
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for steps to build and upload the UI and backend.
+
+## Security
+
+- Cosmos DB: private endpoint, public access disabled
+- Storage Account: HTTPS-only, TLS 1.2
+- App Service: HTTPS-only, VNet integration for outbound traffic
+- No secrets hardcoded — all passed via variables or generated

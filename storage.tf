@@ -5,14 +5,13 @@ resource "azurerm_storage_account" "frontend" {
   account_tier               = "Standard"
   account_replication_type   = "LRS"
   https_traffic_only_enabled = true
+  min_tls_version            = "TLS1_2"
+  shared_access_key_enabled  = true
 
   static_website {
     index_document     = var.frontend_index_document
     error_404_document = var.frontend_error_document
   }
 
-  tags = {
-    environment = "production"
-    project     = "digital-wallet"
-  }
+  tags = local.common_tags
 }

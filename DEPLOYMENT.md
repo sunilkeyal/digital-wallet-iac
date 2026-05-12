@@ -2,149 +2,105 @@
 
 ## Prerequisites
 
-You must have the following installed on your system:
-
-1. **Azure CLI** - Download from https://aka.ms/installazurecliwindows
-2. **Terraform** - Download from https://www.terraform.io/downloads
-3. **A valid Azure subscription** with permissions to create resources
+- **Azure CLI** — https://aka.ms/installazurecliwindows
+- **Terraform** ≥ 1.5 — https://www.terraform.io/downloads
+- **An Azure subscription** with permissions to create resources
 
 ## Step-by-step Deployment
 
-### 1. Install Azure CLI
-
-Download the Windows installer from: https://aka.ms/installazurecliwindows
-
-After installation, restart your PowerShell terminal and verify:
-
-```powershell
-az --version
-```
-
-### 2. Authenticate to Azure
+### 1. Authenticate to Azure
 
 ```powershell
 az login
+az account set --subscription "your-subscription-id"
 ```
 
-This will open your browser for interactive authentication. Confirm the Azure subscription:
-
-```powershell
-az account set --subscription 0ebe7661-7a3a-4632-bd5e-0bed8e7154af
-```
-
-### 3. Initialize Terraform
-
-From the `digital-wallet-iac` directory:
+### 2. Configure Variables
 
 ```powershell
 cd digital-wallet-iac
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your preferred prefix, region, etc.
+```
+
+### 3. Initialize and Deploy
+
+```powershell
 terraform init
-```
-
-### 4. Plan the Deployment
-
-Generate a plan to preview all resources that will be created:
-
-```powershell
+terraform validate
 terraform plan -out=tfplan
-```
-
-Review the plan output. It will create:
-
-- Azure Resource Group: `digital-wallet-rg` in `eastus`
-- Storage Account: for static website hosting (React UI)
-- Cosmos DB Account: MongoDB API database
-- App Service Plan: `B1` Linux plan
-- App Service: for Spring Boot backend
-
-### 5. Apply the Configuration
-
-Deploy the infrastructure to Azure:
-
-```powershell
 terraform apply tfplan
 ```
 
-This will take 5-10 minutes to complete.
+This provisions (5-10 minutes):
 
-### 6. Retrieve Outputs
+| Resource | Detail |
+|----------|--------|
+| Resource Group | Container for all resources |
+| Virtual Network + Subnets | Private endpoints + App Service delegation |
+| Storage Account | Static website for React UI (public) |
+| Cosmos DB (MongoDB API) | Private endpoint, public access disabled |
+| App Service Plan (S1 Linux) | Standard tier for VNet integration |
+| App Service (Java 21) | Spring Boot with VNet integration |
+| Private Endpoint | Cosmos DB via private IP |
+| Log Analytics + App Insights | Monitoring and diagnostics |
 
-After successful deployment, Terraform will display the URLs:
+### 4. Retrieve Outputs
 
 ```powershell
 terraform output
 ```
 
-You should see:
-- `frontend_static_website_url`: URL to the React UI
-- `backend_app_url`: URL to the Spring Boot API
+Shows:
+- `frontend_static_website_url` — React UI URL
+- `backend_app_url` — Spring Boot API URL
+- `cosmos_account_name` — Cosmos DB account name
+- `application_insights_connection_string` — (sensitive) App Insights connection
 
-### 7. Deploy Applications
-
-**Deploy the UI:**
-
-Build and upload the React UI to the storage account static website:
+### 5. Deploy the UI
 
 ```powershell
-cd digital-wallet-ui
+cd ../digital-wallet-ui
 npm run build
 
-# Get the storage account name from terraform output
-$storageAccountName = terraform output -raw frontend_storage_account_name
-
-# Upload to storage
-az storage blob upload-batch -s ./dist -d '$web' --account-name $storageAccountName
+$storageAccount = "your-storage-account-name"  # from terraform output
+az storage blob upload-batch -s ./dist -d '$web' --account-name $storageAccount
 ```
 
-**Deploy the Backend:**
-
-Build the Spring Boot JAR and deploy to App Service:
+### 6. Deploy the Backend
 
 ```powershell
-cd digital-wallet-backend
+cd ../digital-wallet-backend
 ./gradlew build
 
-# Get the app service name from terraform output
-$appServiceName = terraform output -raw backend_app_name
-
-# Deploy the JAR
-az webapp deployment source config-zip --resource-group digital-wallet-rg --name $appServiceName --src build/libs/digital-wallet-backend-0.0.1-SNAPSHOT.jar
+$appService = "your-app-service-name"  # from terraform output
+az webapp deployment source config-zip `
+  --resource-group digital-wallet-rg `
+  --name $appService `
+  --src build/libs/*.jar
 ```
+
+### 7. Verify
+
+Open `frontend_static_website_url` in a browser. The UI should load and connect to the backend API.
+
+## Enabling Remote State (for teams)
+
+See the instructions in `versions.tf` or the [README](./README.md#remote-state-recommended-for-teams).
 
 ## Troubleshooting
 
-### Error: "unable to build authorizer"
-
-Make sure Azure CLI is installed and you have successfully run `az login`.
-
-### Error: "Resource group already exists"
-
-If the resource group exists, the deployment will skip creation. If you want a fresh deployment, manually delete the resource group:
-
-```powershell
-az group delete --name digital-wallet-rg --yes
-```
-
-### Error: "Subscription not found"
-
-Verify your subscription ID is correct:
-
-```powershell
-az account list --output table
-```
+| Problem | Solution |
+|---------|----------|
+| `az login` fails | Reinstall Azure CLI, ensure browser allows popups |
+| `Resource group already exists` | Safe to reuse; delete with `az group delete -n digital-wallet-rg --yes` if you want fresh |
+| `Subscription not found` | Run `az account list --output table` to find your subscription ID |
+| Backend won't start | Check App Service logs in Azure Portal or App Insights |
 
 ## Cleanup
-
-To destroy all resources created by Terraform:
 
 ```powershell
 terraform destroy
 ```
 
-Confirm when prompted.
-
-## Additional Resources
-
-- [Terraform Azure Provider Documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
-- [Azure CLI Documentation](https://docs.microsoft.com/cli/azure/)
-- [Azure App Service Documentation](https://docs.microsoft.com/azure/app-service/)
+This deletes all resources. **This cannot be undone.** Cosmos DB data will be lost.

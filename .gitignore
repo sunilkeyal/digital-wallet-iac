@@ -34,3 +34,7 @@ terraform.rc
 
 # Plan files
 *.tfplan
+
+# Sensitive variable files
+terraform.tfvars
+*.auto.tfvars

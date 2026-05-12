@@ -6,6 +6,15 @@ locals {
   cosmos_account_name           = substr("${local.resource_prefix}cosmos${local.name_suffix}", 0, 50)
   app_service_plan_name         = "${local.backend_app_name}-plan"
   cosmos_db_name                = "digital-wallet"
+
+  common_tags = merge(
+    {
+      environment = "production"
+      project     = "digital-wallet"
+      managed-by  = "terraform"
+    },
+    var.tags
+  )
 }
 
 resource "random_string" "name_suffix" {
