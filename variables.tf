@@ -1,3 +1,8 @@
+variable "arm_subscription_id" {
+  type        = string
+  description = "Azure Subscription ID."
+}
+
 variable "resource_prefix" {
   type        = string
   default     = "digitalwallet"
