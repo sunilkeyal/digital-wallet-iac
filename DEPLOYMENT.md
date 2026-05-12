@@ -41,7 +41,7 @@ This provisions (5-10 minutes):
 | Storage Account | Static website for React UI (public) |
 | Cosmos DB (MongoDB API) | Private endpoint, public access disabled |
 | App Service Plan (S1 Linux) | Standard tier for VNet integration |
-| App Service (Java 21) | Spring Boot with VNet integration |
+| App Service (Java 25) | Spring Boot with VNet integration |
 | Private Endpoint | Cosmos DB via private IP |
 | Log Analytics + App Insights | Monitoring and diagnostics |
 

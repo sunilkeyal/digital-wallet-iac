@@ -9,7 +9,7 @@ Terraform infrastructure for deploying the Digital Wallet application to Azure.
 │  Storage Account (static website)                │
 │  → React UI (publicly accessible)               │
 ├─────────────────────────────────────────────────┤
-│  App Service (Linux, Java 21)                    │
+│  App Service (Linux, Java 25)                    │
 │  → Spring Boot backend                           │
 │  → VNet integration for private egress           │
 ├─────────────────────────────────────────────────┤
@@ -29,7 +29,7 @@ Terraform infrastructure for deploying the Digital Wallet application to Azure.
 - **Storage Account** — static website hosting for the React UI (HTTPS-only, TLS 1.2)
 - **Cosmos DB** — MongoDB API, private endpoint, public access disabled, bounded staleness consistency
 - **App Service Plan** — Linux, S1+ (Standard required for VNet integration)
-- **App Service** — Java 21 Spring Boot, VNet-integrated for private outbound traffic
+- **App Service** — Java 25 Spring Boot, VNet-integrated for private outbound traffic
 - **Private Endpoint** — Cosmos DB accessible only via private IP
 - **Log Analytics** — centralized logs and metrics
 - **Application Insights** — application performance monitoring
