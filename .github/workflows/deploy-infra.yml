@@ -69,6 +69,11 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
             | jq -r '.value' > /tmp/oidc-token
 
+      - name: Verify OIDC token
+        run: |
+          echo "Token bytes: $(wc -c < /tmp/oidc-token)"
+          if [ ! -s /tmp/oidc-token ]; then echo "ERROR: empty token"; exit 1; fi
+
       - name: Terraform init (Terraform Cloud)
         env:
           ARM_USE_CLI: false
@@ -117,6 +122,11 @@ jobs:
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
             | jq -r '.value' > /tmp/oidc-token
+
+      - name: Verify OIDC token
+        run: |
+          echo "Token bytes: $(wc -c < /tmp/oidc-token)"
+          if [ ! -s /tmp/oidc-token ]; then echo "ERROR: empty token"; exit 1; fi
 
       - name: Terraform init (Terraform Cloud)
         env:
