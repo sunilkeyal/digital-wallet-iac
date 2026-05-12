@@ -61,27 +61,22 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Azure OIDC token → access token
+      - name: Fetch OIDC token
+        id: oidc
         run: |
-          OIDC_TOKEN=$(curl -sSL \
+          curl -sSL \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
-            | jq -r '.value')
-
-          ACCESS_TOKEN=$(curl -sSL \
-            -X POST \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-            -d "scope=https://management.azure.com/.default" \
-            -d "grant_type=client_credentials" \
-            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
-            -d "client_assertion=$OIDC_TOKEN" \
-            "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" \
-            | jq -r '.access_token')
-
-          echo "ARM_ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+            | jq -r '.value' > /tmp/oidc-token
 
       - name: Terraform init (Terraform Cloud)
+        env:
+          ARM_USE_CLI: false
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: |
           cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
@@ -93,6 +88,13 @@ jobs:
           terraform init -backend-config=backend.tfbackend
 
       - name: Terraform plan
+        env:
+          ARM_USE_CLI: false
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: terraform plan
 
   deploy:
@@ -108,27 +110,22 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Azure OIDC token → access token
+      - name: Fetch OIDC token
+        id: oidc
         run: |
-          OIDC_TOKEN=$(curl -sSL \
+          curl -sSL \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
-            | jq -r '.value')
-
-          ACCESS_TOKEN=$(curl -sSL \
-            -X POST \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-            -d "scope=https://management.azure.com/.default" \
-            -d "grant_type=client_credentials" \
-            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
-            -d "client_assertion=$OIDC_TOKEN" \
-            "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" \
-            | jq -r '.access_token')
-
-          echo "ARM_ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+            | jq -r '.value' > /tmp/oidc-token
 
       - name: Terraform init (Terraform Cloud)
+        env:
+          ARM_USE_CLI: false
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: |
           cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
@@ -140,7 +137,21 @@ jobs:
           terraform init -backend-config=backend.tfbackend
 
       - name: Terraform plan
+        env:
+          ARM_USE_CLI: false
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: terraform plan
 
       - name: Terraform apply
+        env:
+          ARM_USE_CLI: false
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: terraform apply -auto-approve
