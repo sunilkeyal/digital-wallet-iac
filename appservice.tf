@@ -31,6 +31,11 @@ resource "azurerm_linux_web_app" "backend" {
     SPRING_DATA_MONGODB_DATABASE          = local.cosmos_db_name
     WEBSITES_ENABLE_APP_SERVICE_STORAGE   = "false"
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.main.connection_string
+    JWT_SECRET                            = var.jwt_secret
+    JWT_EXPIRATION                        = "86400000"
+    APP_ADMIN_USERNAME                    = "admin"
+    APP_ADMIN_PASSWORD                    = var.app_admin_password
+    APP_ADMIN_EMAIL                       = "admin@digitalwallet.com"
   }
 
   tags = local.common_tags

@@ -32,3 +32,15 @@ variable "tags" {
   default     = {}
   description = "Additional tags to apply to all resources."
 }
+
+variable "jwt_secret" {
+  type        = string
+  sensitive   = true
+  description = "Secret key used for signing JWT tokens."
+}
+
+variable "app_admin_password" {
+  type        = string
+  sensitive   = true
+  description = "Password for the default admin user."
+}
