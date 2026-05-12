@@ -16,6 +16,8 @@ resource "azurerm_linux_web_app" "backend" {
   https_only          = true
 
   site_config {
+    always_on = false
+
     application_stack {
       java_version        = "25"
       java_server         = "JAVA"
