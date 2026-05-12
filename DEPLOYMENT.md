@@ -18,13 +18,28 @@ az login
 az account set --subscription "your-subscription-id"
 ```
 
-### 2. Deploy Infrastructure
+### 2. Terraform Cloud Setup (local dev)
+
+```powershell
+# Authenticate Terraform with Terraform Cloud
+terraform login
+
+# Create backend config file (gitignored — keeps TFC secrets local)
+@"
+organization = "your-tfc-org"
+workspaces {
+  name = "digital-wallet-iac"
+}
+"@ | Out-File -Encoding utf8 backend.tfbackend
+```
+
+### 3. Deploy Infrastructure
 
 ```powershell
 cd digital-wallet-iac
 cp terraform.tfvars.example terraform.tfvars
 
-terraform init
+terraform init -backend-config=backend.tfbackend
 terraform validate
 terraform plan -out=tfplan
 terraform apply tfplan
@@ -69,5 +84,6 @@ az webapp deployment source config-zip `
 
 ```powershell
 cd ../digital-wallet-iac
+terraform init -backend-config=backend.tfbackend
 terraform destroy
 ```

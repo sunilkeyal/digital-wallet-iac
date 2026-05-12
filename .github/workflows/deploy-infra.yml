@@ -48,7 +48,7 @@ jobs:
 
   plan:
     needs: validate
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == false
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     environment: ${{ vars.TF_ENVIRONMENT || 'dev' }}
 
@@ -69,22 +69,19 @@ jobs:
 
       - name: Terraform init (Terraform Cloud)
         run: |
-          terraform init \
-            -backend-config="organization=${{ env.TF_CLOUD_ORGANIZATION }}" \
-            -backend-config="workspaces.name=${{ env.TF_CLOUD_WORKSPACE }}"
+          cat > backend.tfbackend <<EOF
+          organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
+          workspaces {
+            name = "${{ env.TF_CLOUD_WORKSPACE }}"
+          }
+          EOF
+          terraform init -backend-config=backend.tfbackend
 
       - name: Terraform plan
-        run: terraform plan -out=tfplan
+        run: terraform plan
 
-      - name: Upload plan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: tfplan
-          retention-days: 7
-
-  apply:
-    needs: plan
+  deploy:
+    needs: validate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ vars.TF_ENVIRONMENT || 'production' }}
@@ -106,14 +103,16 @@ jobs:
 
       - name: Terraform init (Terraform Cloud)
         run: |
-          terraform init \
-            -backend-config="organization=${{ env.TF_CLOUD_ORGANIZATION }}" \
-            -backend-config="workspaces.name=${{ env.TF_CLOUD_WORKSPACE }}"
+          cat > backend.tfbackend <<EOF
+          organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
+          workspaces {
+            name = "${{ env.TF_CLOUD_WORKSPACE }}"
+          }
+          EOF
+          terraform init -backend-config=backend.tfbackend
 
-      - name: Download plan artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
+      - name: Terraform plan
+        run: terraform plan
 
       - name: Terraform apply
-        run: terraform apply tfplan
+        run: terraform apply -auto-approve

@@ -35,6 +35,9 @@ terraform.rc
 # Plan files
 *.tfplan
 
+# Local Terraform Cloud backend config
+backend.tfbackend
+
 # Sensitive variable files
 terraform.tfvars
 *.auto.tfvars
