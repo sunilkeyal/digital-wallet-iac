@@ -3,9 +3,19 @@ output "resource_group_name" {
   description = "The Azure resource group created for the digital wallet application."
 }
 
+output "frontend_static_app_name" {
+  value       = azurerm_static_web_app.frontend.name
+  description = "Name of the Azure Static Web App (used for deployment)."
+}
+
 output "frontend_static_website_url" {
-  value       = azurerm_storage_account.frontend.primary_web_endpoint
-  description = "The public URL for the React UI static website."
+  value       = "https://${azurerm_static_web_app.frontend.default_host_name}"
+  description = "The public URL for the React UI served by Azure Static Web Apps."
+}
+
+output "backend_app_name" {
+  value       = azurerm_linux_web_app.backend.name
+  description = "Name of the backend App Service (used for deployment)."
 }
 
 output "backend_app_url" {

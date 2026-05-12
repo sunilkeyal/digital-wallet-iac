@@ -2,7 +2,7 @@ resource "azurerm_log_analytics_workspace" "main" {
   name                = "${local.resource_prefix}-logs-${local.name_suffix}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  sku                 = var.log_analytics_sku
+  sku                 = "PerGB2018"
   retention_in_days   = 30
 
   tags = local.common_tags
@@ -59,27 +59,5 @@ resource "azurerm_monitor_diagnostic_setting" "cosmos" {
 
   enabled_metric {
     category = "AllMetrics"
-  }
-}
-
-resource "azurerm_monitor_diagnostic_setting" "storage" {
-  name                       = "diagnostics-storage"
-  target_resource_id         = azurerm_storage_account.frontend.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
-
-  enabled_log {
-    category = "StorageRead"
-  }
-
-  enabled_log {
-    category = "StorageWrite"
-  }
-
-  enabled_log {
-    category = "StorageDelete"
-  }
-
-  enabled_metric {
-    category = "Transaction"
   }
 }

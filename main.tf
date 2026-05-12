@@ -1,15 +1,15 @@
 locals {
-  resource_prefix               = lower(var.resource_prefix)
-  name_suffix                   = random_string.name_suffix.result
-  backend_app_name              = "${local.resource_prefix}-backend-${local.name_suffix}"
-  frontend_storage_account_name = substr("${local.resource_prefix}front${local.name_suffix}", 0, 24)
-  cosmos_account_name           = substr("${local.resource_prefix}cosmos${local.name_suffix}", 0, 50)
-  app_service_plan_name         = "${local.backend_app_name}-plan"
-  cosmos_db_name                = "digital-wallet"
+  resource_prefix          = lower(var.resource_prefix)
+  name_suffix              = random_string.name_suffix.result
+  backend_app_name         = "${local.resource_prefix}-backend-${local.name_suffix}"
+  frontend_static_app_name = substr("${local.resource_prefix}-front-${local.name_suffix}", 0, 24)
+  cosmos_account_name      = substr("${local.resource_prefix}cosmos${local.name_suffix}", 0, 50)
+  app_service_plan_name    = "${local.backend_app_name}-plan"
+  cosmos_db_name           = "digital-wallet"
 
   common_tags = merge(
     {
-      environment = "production"
+      environment = "development"
       project     = "digital-wallet"
       managed-by  = "terraform"
     },
