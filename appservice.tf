@@ -3,7 +3,7 @@ resource "azurerm_service_plan" "backend" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   os_type             = "Linux"
-  sku_name            = var.app_service_plan_sku
+  sku_name            = "F1"
 
   tags = local.common_tags
 }
@@ -32,9 +32,4 @@ resource "azurerm_linux_web_app" "backend" {
   }
 
   tags = local.common_tags
-}
-
-resource "azurerm_app_service_virtual_network_swift_connection" "backend" {
-  app_service_id = azurerm_linux_web_app.backend.id
-  subnet_id      = azurerm_subnet.appservice.id
 }

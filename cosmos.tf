@@ -4,13 +4,12 @@ resource "azurerm_cosmosdb_account" "mongo" {
   resource_group_name           = azurerm_resource_group.rg.name
   offer_type                    = "Standard"
   kind                          = "MongoDB"
-  public_network_access_enabled = false
   mongo_server_version          = "7.0"
+  free_tier_enabled             = true
+  public_network_access_enabled = true
 
   consistency_policy {
-    consistency_level       = "BoundedStaleness"
-    max_interval_in_seconds = 300
-    max_staleness_prefix    = 100000
+    consistency_level = "Session"
   }
 
   geo_location {

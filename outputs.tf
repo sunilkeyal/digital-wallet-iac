@@ -28,8 +28,3 @@ output "log_analytics_workspace_id" {
   value       = azurerm_log_analytics_workspace.main.workspace_id
   description = "The workspace ID of the Log Analytics workspace."
 }
-
-output "vnet_id" {
-  value       = azurerm_virtual_network.main.id
-  description = "ID of the created virtual network."
-}
