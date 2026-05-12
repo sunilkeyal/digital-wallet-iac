@@ -62,6 +62,7 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Azure login (OIDC)
+        id: azure-login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -69,6 +70,12 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Terraform init (Terraform Cloud)
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN: ${{ steps.azure-login.outputs.idToken }}
         run: |
           cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
@@ -80,6 +87,12 @@ jobs:
           terraform init -backend-config=backend.tfbackend
 
       - name: Terraform plan
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN: ${{ steps.azure-login.outputs.idToken }}
         run: terraform plan
 
   deploy:
@@ -96,6 +109,7 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Azure login (OIDC)
+        id: azure-login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -103,6 +117,12 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Terraform init (Terraform Cloud)
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN: ${{ steps.azure-login.outputs.idToken }}
         run: |
           cat > backend.tfbackend <<'EOF'
           organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
@@ -114,7 +134,19 @@ jobs:
           terraform init -backend-config=backend.tfbackend
 
       - name: Terraform plan
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN: ${{ steps.azure-login.outputs.idToken }}
         run: terraform plan
 
       - name: Terraform apply
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_OIDC_TOKEN: ${{ steps.azure-login.outputs.idToken }}
         run: terraform apply -auto-approve
