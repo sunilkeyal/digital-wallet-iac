@@ -76,7 +76,6 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_arm_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: |
           cat > backend.tfbackend <<'EOF'
@@ -95,9 +94,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_arm_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan
+        run: terraform plan -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
   deploy:
     needs: validate
@@ -127,7 +125,6 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_arm_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
         run: |
           cat > backend.tfbackend <<'EOF'
@@ -146,9 +143,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_arm_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan
+        run: terraform plan -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
       - name: Terraform apply
         env:
@@ -157,6 +153,5 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_arm_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
