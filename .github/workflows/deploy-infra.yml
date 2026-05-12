@@ -95,7 +95,7 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        run: terraform plan -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
   deploy:
     needs: validate
@@ -144,7 +144,7 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        run: terraform plan -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
       - name: Terraform apply
         env:
@@ -154,4 +154,4 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform apply -auto-approve -local -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        run: terraform apply -auto-approve -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
