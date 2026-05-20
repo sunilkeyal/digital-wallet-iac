@@ -3,9 +3,9 @@ terraform {
 
   backend "remote" {
     hostname     = "app.terraform.io"
-    organization = "placeholder"
+    organization = "digital-wallet"
     workspaces {
-      name = "placeholder"
+      name = "digital-wallet-iac"
     }
   }
 
