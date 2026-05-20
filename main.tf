@@ -1,11 +1,9 @@
 locals {
-  resource_prefix          = lower(var.resource_prefix)
-  name_suffix              = random_string.name_suffix.result
-  backend_app_name         = "${local.resource_prefix}-backend-${local.name_suffix}"
-  frontend_static_app_name = substr("${local.resource_prefix}-front-${local.name_suffix}", 0, 24)
-  cosmos_account_name      = substr("${local.resource_prefix}cosmos${local.name_suffix}", 0, 50)
-  app_service_plan_name    = "${local.backend_app_name}-plan"
-  cosmos_db_name           = "digital-wallet"
+  name_prefix   = var.name_prefix
+  name_suffix   = random_string.name_suffix.result
+  display_name  = "${local.name_prefix}-${local.name_suffix}"
+  vcn_cidr      = "10.0.0.0/16"
+  public_cidr   = "10.0.1.0/24"
 
   common_tags = merge(
     {
@@ -22,9 +20,4 @@ resource "random_string" "name_suffix" {
   upper   = false
   special = false
   numeric = true
-}
-
-resource "azurerm_resource_group" "rg" {
-  name     = var.resource_group_name
-  location = var.location
 }

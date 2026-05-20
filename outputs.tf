@@ -1,40 +1,34 @@
-output "resource_group_name" {
-  value       = azurerm_resource_group.rg.name
-  description = "The Azure resource group created for the digital wallet application."
+output "vm_public_ip" {
+  value       = oci_core_instance.main.public_ip
+  description = "Public IP of the compute instance (for SSH access)."
 }
 
-output "frontend_static_app_name" {
-  value       = azurerm_static_web_app.frontend.name
-  description = "Name of the Azure Static Web App (used for deployment)."
+output "vm_private_ip" {
+  value       = oci_core_instance.main.private_ip
+  description = "Private IP of the compute instance."
 }
 
-output "frontend_static_website_url" {
-  value       = "https://${azurerm_static_web_app.frontend.default_host_name}"
-  description = "The public URL for the React UI served by Azure Static Web Apps."
+output "load_balancer_public_ip" {
+  value       = oci_load_balancer_load_balancer.main.ip_addresses[0].ip_address
+  description = "Public IP of the load balancer (the application URL)."
 }
 
-output "backend_app_name" {
-  value       = azurerm_linux_web_app.backend.name
-  description = "Name of the backend App Service (used for deployment)."
+output "application_url" {
+  value       = "http://${oci_load_balancer_load_balancer.main.ip_addresses[0].ip_address}"
+  description = "The public URL for the application."
 }
 
-output "backend_app_url" {
-  value       = "https://${azurerm_linux_web_app.backend.default_hostname}"
-  description = "The HTTPS endpoint for the backend App Service."
+output "storage_bucket_name" {
+  value       = oci_objectstorage_bucket.main.name
+  description = "Name of the OCI Object Storage bucket for deployment artifacts."
 }
 
-output "cosmos_account_name" {
-  value       = azurerm_cosmosdb_account.mongo.name
-  description = "Name of the Cosmos DB account used as the backend MongoDB store."
+output "availability_domain" {
+  value       = data.oci_identity_availability_domain.ad.name
+  description = "The availability domain used for the compute instance."
 }
 
-output "application_insights_connection_string" {
-  value       = azurerm_application_insights.main.connection_string
-  description = "Connection string for Application Insights."
-  sensitive   = true
-}
-
-output "log_analytics_workspace_id" {
-  value       = azurerm_log_analytics_workspace.main.workspace_id
-  description = "The workspace ID of the Log Analytics workspace."
+output "compartment_id" {
+  value       = var.compartment_ocid
+  description = "The OCID of the compartment."
 }

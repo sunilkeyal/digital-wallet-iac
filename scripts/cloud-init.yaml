@@ -1,0 +1,125 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+
+runcmd:
+  # Install Docker CE
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Install Docker Compose plugin
+  - apt-get update
+  - apt-get install -y docker-compose-plugin
+
+  # Create application directories
+  - mkdir -p /opt/digital-wallet
+
+  # Create production docker-compose.yml with OCIR images
+  - cat > /opt/digital-wallet/docker-compose.yml <<'DOCKERCOMPOSEEOF'
+services:
+  mongodb:
+    image: mongo:7
+    container_name: digital-wallet-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - digital-wallet
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: $${BACKEND_IMAGE:-${oci_region}.ocir.io/${oci_namespace}/digital-wallet-backend:${docker_image_tag}}
+    container_name: digital-wallet-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/digital-wallet
+      JWT_SECRET: $${JWT_SECRET}
+      JWT_EXPIRATION: $${JWT_EXPIRATION:-86400000}
+      APP_ADMIN_USERNAME: $${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: $${APP_ADMIN_PASSWORD}
+      APP_ADMIN_EMAIL: $${APP_ADMIN_EMAIL:-admin@digitalwallet.com}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    networks:
+      - digital-wallet
+
+  frontend:
+    image: $${FRONTEND_IMAGE:-${oci_region}.ocir.io/${oci_namespace}/digital-wallet-frontend:${docker_image_tag}}
+    container_name: digital-wallet-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - digital-wallet
+
+volumes:
+  mongodb_data:
+
+networks:
+  digital-wallet:
+DOCKERCOMPOSEEOF
+
+  # Create deploy script with OCIR login
+  - cat > /opt/digital-wallet/deploy.sh <<'DEPLOYEOF'
+#!/bin/bash
+set -e
+
+cd /opt/digital-wallet
+
+# Login to OCIR if credentials provided
+OCI_DOCKER_USERNAME="$${OCI_DOCKER_USERNAME:-}"
+OCI_AUTH_TOKEN="$${OCI_AUTH_TOKEN:-}"
+
+if [ -n "$OCI_AUTH_TOKEN" ] && [ -n "$OCI_DOCKER_USERNAME" ]; then
+  echo "$OCI_AUTH_TOKEN" | docker login "${oci_region}.ocir.io" \
+    --username "$OCI_DOCKER_USERNAME" \
+    --password-stdin
+fi
+
+# Pull latest images
+docker compose pull
+
+# Recreate containers with new images
+docker compose up -d --remove-orphans
+
+# Clean up old images
+docker image prune -f
+
+echo "Deployment complete"
+DEPLOYEOF
+
+  - chmod +x /opt/digital-wallet/deploy.sh
+
+  # Create initial .env with secrets
+  - cat > /opt/digital-wallet/.env <<'ENVEOF'
+JWT_SECRET=${jwt_secret}
+JWT_EXPIRATION=${jwt_expiration}
+APP_ADMIN_USERNAME=${app_admin_username}
+APP_ADMIN_PASSWORD=${app_admin_password}
+APP_ADMIN_EMAIL=${app_admin_email}
+OCI_REGION=${oci_region}
+OCI_NAMESPACE=${oci_namespace}
+ENVEOF
+
+  # Pull images and start services (initial pull may fail until images are pushed to OCIR)
+  - docker compose -f /opt/digital-wallet/docker-compose.yml --env-file /opt/digital-wallet/.env pull || true
+  - docker compose -f /opt/digital-wallet/docker-compose.yml --env-file /opt/digital-wallet/.env up -d || true
+
+output:
+  all: '| tee -a /var/log/cloud-init-output.log'

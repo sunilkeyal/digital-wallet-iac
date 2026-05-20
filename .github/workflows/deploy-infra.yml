@@ -1,167 +1,37 @@
 name: Deploy Infrastructure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '**.tf'
-      - '**.tfvars'
-      - 'terraform.tfvars.example'
-      - '.github/workflows/**'
-  pull_request:
-    branches: [main]
-    paths:
-      - '**.tf'
-      - '**.tfvars'
-      - 'terraform.tfvars.example'
-      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
-  TF_VAR_resource_prefix: ${{ vars.TF_RESOURCE_PREFIX || 'dw' }}
-  TF_VAR_resource_group_name: ${{ vars.TF_RESOURCE_GROUP_NAME || 'digital-wallet-rg' }}
-  TF_VAR_location: ${{ vars.TF_LOCATION || 'eastus' }}
-  TF_VAR_backend_port: ${{ vars.TF_BACKEND_PORT || '8080' }}
-  TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
-  TF_CLOUD_WORKSPACE: ${{ vars.TF_CLOUD_WORKSPACE || 'digital-wallet-iac' }}
+  TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+  TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+  TF_VAR_region: ${{ vars.OCI_REGION || 'us-ashburn-1' }}
+  TF_VAR_ssh_public_key: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+  TF_VAR_app_admin_password: ${{ secrets.APP_ADMIN_PASSWORD }}
+  TF_VAR_name_prefix: ${{ vars.TF_VAR_name_prefix || 'dw' }}
 
 jobs:
-  validate:
+  deploy-infra:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: digital-wallet-iac
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.8.0
+          cli_config_credentials_token: ${{ secrets.TFE_TOKEN }}
 
-      - name: Terraform fmt
-        run: terraform fmt -check -recursive
-
-      - name: Terraform init (no backend needed for validation)
-        run: terraform init -backend=false
-
-      - name: Terraform validate
-        run: terraform validate
-
-  plan:
-    needs: validate
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    environment: ${{ vars.TF_ENVIRONMENT || 'dev' }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
-
-      - name: Fetch OIDC token
-        id: oidc
-        run: |
-          curl -sSL \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
-            | jq -r '.value' > /tmp/oidc-token
-
-      - name: Verify OIDC token
-        run: |
-          echo "Token bytes: $(wc -c < /tmp/oidc-token)"
-          if [ ! -s /tmp/oidc-token ]; then echo "ERROR: empty token"; exit 1; fi
-
-      - name: Terraform init (Terraform Cloud)
-        env:
-          ARM_USE_CLI: false
-          ARM_USE_OIDC: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: |
-          cat > backend.tfbackend <<'EOF'
-          organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
-          workspaces {
-            name = "${{ env.TF_CLOUD_WORKSPACE }}"
-          }
-          token = "${{ secrets.TFE_TOKEN }}"
-          EOF
-          terraform init -backend-config=backend.tfbackend
-
-      - name: Terraform plan
-        env:
-          ARM_USE_CLI: false
-          ARM_USE_OIDC: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -var="app_admin_password=${{ secrets.APP_ADMIN_PASSWORD }}"
-
-  deploy:
-    needs: validate
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    environment: ${{ vars.TF_ENVIRONMENT || 'production' }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
-
-      - name: Fetch OIDC token
-        id: oidc
-        run: |
-          curl -sSL \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
-            | jq -r '.value' > /tmp/oidc-token
-
-      - name: Verify OIDC token
-        run: |
-          echo "Token bytes: $(wc -c < /tmp/oidc-token)"
-          if [ ! -s /tmp/oidc-token ]; then echo "ERROR: empty token"; exit 1; fi
-
-      - name: Terraform init (Terraform Cloud)
-        env:
-          ARM_USE_CLI: false
-          ARM_USE_OIDC: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: |
-          cat > backend.tfbackend <<'EOF'
-          organization = "${{ env.TF_CLOUD_ORGANIZATION }}"
-          workspaces {
-            name = "${{ env.TF_CLOUD_WORKSPACE }}"
-          }
-          token = "${{ secrets.TFE_TOKEN }}"
-          EOF
-          terraform init -backend-config=backend.tfbackend
-
-      - name: Terraform plan
-        env:
-          ARM_USE_CLI: false
-          ARM_USE_OIDC: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform plan -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -var="app_admin_password=${{ secrets.APP_ADMIN_PASSWORD }}"
+      - name: Terraform init
+        run: terraform init
 
       - name: Terraform apply
-        env:
-          ARM_USE_CLI: false
-          ARM_USE_OIDC: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_OIDC_TOKEN_FILE_PATH: /tmp/oidc-token
-        run: terraform apply -auto-approve -var="arm_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -var="app_admin_password=${{ secrets.APP_ADMIN_PASSWORD }}"
+        run: terraform apply -auto-approve

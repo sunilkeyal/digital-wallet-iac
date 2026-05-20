@@ -1,36 +1,34 @@
-variable "arm_subscription_id" {
+variable "tenancy_ocid" {
   type        = string
-  description = "Azure Subscription ID."
+  description = "OCID of the OCI tenancy."
 }
 
-variable "resource_prefix" {
+variable "compartment_ocid" {
   type        = string
-  default     = "digitalwallet"
-  description = "Prefix used for Azure resource names. Will be normalized to lowercase letters and digits."
+  description = "OCID of the compartment to create resources in. Usually your tenancy OCID."
 }
 
-variable "resource_group_name" {
+variable "region" {
   type        = string
-  default     = "digital-wallet-rg"
-  description = "Name of the Azure resource group to create."
+  description = "OCI region identifier (e.g. us-ashburn-1, eu-frankfurt-1). Must be your home region for Always Free eligibility."
 }
 
-variable "location" {
+variable "name_prefix" {
   type        = string
-  default     = "eastus"
-  description = "Azure region where resources will be created."
+  default     = "dw"
+  description = "Prefix used for OCI resource display names."
 }
 
-variable "backend_port" {
+variable "ssh_public_key" {
+  type        = string
+  sensitive   = true
+  description = "SSH public key string for accessing the compute instance."
+}
+
+variable "availability_domain_index" {
   type        = number
-  default     = 8080
-  description = "Port that the backend Spring Boot application listens on."
-}
-
-variable "tags" {
-  type        = map(string)
-  default     = {}
-  description = "Additional tags to apply to all resources."
+  default     = 0
+  description = "Index into the list of availability domains (0 = first AD)."
 }
 
 variable "jwt_secret" {
@@ -39,8 +37,38 @@ variable "jwt_secret" {
   description = "Secret key used for signing JWT tokens."
 }
 
+variable "jwt_expiration" {
+  type        = string
+  default     = "86400000"
+  description = "JWT token expiration in milliseconds (default 24h)."
+}
+
+variable "app_admin_username" {
+  type        = string
+  default     = "admin"
+  description = "Username for the default admin user."
+}
+
 variable "app_admin_password" {
   type        = string
   sensitive   = true
   description = "Password for the default admin user."
+}
+
+variable "app_admin_email" {
+  type        = string
+  default     = "admin@digitalwallet.com"
+  description = "Email for the default admin user."
+}
+
+variable "docker_image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for Docker images pulled from the registry."
+}
+
+variable "tags" {
+  type        = map(string)
+  default     = {}
+  description = "Additional free-form tags to apply to resources."
 }

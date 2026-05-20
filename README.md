@@ -1,128 +1,212 @@
-# digital-wallet-iac
+# Digital Wallet - Oracle Cloud Infrastructure (Free Tier)
 
-Terraform infrastructure for deploying the Digital Wallet application to Azure — **entirely on free-tier pricing**.
+Terraform configuration to deploy the Digital Wallet application to Oracle Cloud Infrastructure using Always Free resources — **\$0/month**.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Azure Static Web Apps (Free)                    │
-│  → React UI, global CDN, free SSL, 100 GB bw    │
-├─────────────────────────────────────────────────┤
-│  App Service F1 (Free, Linux, Java 25)           │
-│  → Spring Boot backend                           │
-│  → 60 CPU min/day, 1 GB RAM                     │
-├─────────────────────────────────────────────────┤
-│  Cosmos DB (MongoDB API) — Free Tier             │
-│  → 1000 RU/s, 25 GB storage                     │
-├─────────────────────────────────────────────────┤
-│  Monitoring (within 5 GB/mo free tier)           │
-│  → Log Analytics + Application Insights          │
-│  → Diagnostic settings on backend + Cosmos DB    │
-└─────────────────────────────────────────────────┘
+User Browser
+     |
+     v
+[OCI Flexible Load Balancer (10 Mbps)]  <-- HTTP, free tier
+     |                                      1 LB free per tenancy
+     | port 80
+     v
+[Ampere A1.Flex VM (4 OCPU, 24 GB)]    <-- Docker Host
+     |                                      Always Free: 4 OCPUs, 24 GB RAM
+     | ┌──────────────────────────────┐
+     │ │ frontend (Nginx, port 80)    │
+     │ │   /api/* -> backend:8080     │
+     │ │   /* -> static SPA files     │
+     │ ├──────────────────────────────┤
+     │ │ backend (Spring Boot, 8080)  │
+     │ ├──────────────────────────────┤
+     │ │ mongodb (mongo:7, 27017)     │
+     │ └──────────────────────────────┘
 ```
 
-## Resources — **$0/month**
+All three services run as Docker containers on a single Ampere A1.Flex instance. Docker images are stored in **OCI Container Registry (OCIR)** and pulled during CI/CD deployment.
 
-| Resource | Cost | Detail |
-|----------|------|--------|
-| Resource Group | **$0** | |
-| Azure Static Web Apps (Free) | **$0** | 100 GB bandwidth, 500 MB storage, global CDN, SSL |
-| Cosmos DB (Free Tier) | **$0** | 1000 RU/s + 25 GB storage |
-| App Service Plan F1 | **$0** | 60 CPU min/day, 1 GB RAM |
-| App Service (Java 25) | **$0** | Included in plan |
-| Log Analytics (PerGB2018) | **$0** | Within 5 GB/mo free ingestion |
-| Application Insights | **$0** | Shared with Log Analytics free tier |
-| Diagnostic Settings | **$0** | No direct charge |
-| **Total** | **$0/mo** | |
+## Resources Provisioned
 
-## File structure
+| Resource | Shape / Config | Always Free Limit |
+|---|---|---|
+| VCN | 10.0.0.0/16 | 2 VCNs per tenancy |
+| Public Subnet | 10.0.1.0/24 | Included with VCN |
+| Internet Gateway | 1 | Included with VCN |
+| Security List | HTTP(80), SSH(22) | Included with VCN |
+| Network Security Group | Compute ingress/egress rules | Included with VCN |
+| Compute Instance | VM.Standard.A1.Flex (4 OCPU, 24 GB, 47 GB boot) | 4 OCPUs, 24 GB RAM, 200 GB storage |
+| Flexible Load Balancer | 10 Mbps | 1 LB free per tenancy |
+| Object Storage Bucket | Standard, NoPublicAccess | 20 GB total across tiers |
 
-| File | Purpose |
-|------|---------|
-| `main.tf` | Locals, random suffix, resource group |
-| `providers.tf` | Azure provider configuration |
-| `versions.tf` | Terraform version, provider pins, remote state docs |
-| `variables.tf` | Input variables with defaults |
-| `storage.tf` | Azure Static Web Apps (replaces Storage Account) |
-| `cosmos.tf` | Cosmos DB (free tier) with MongoDB API |
-| `appservice.tf` | App Service plan (F1) + Linux web app (Java 25) |
-| `monitor.tf` | Log Analytics, Application Insights, diagnostics |
-| `outputs.tf` | URLs and connection strings |
+## Prerequisites
 
-## Usage
+1. **Oracle Cloud Free Tier account** ([signup](https://signup.cloud.oracle.com))
+2. **Terraform** >= 1.5.0
+3. **OCI CLI** configured with API keys
+4. **SSH key pair** for VM access
+5. **Docker** locally (for testing build)
+6. **OCIR Auth Token** — generated from OCI Console (user avatar → My profile → Auth Tokens → Generate token)
 
-```powershell
+## Quick Start
+
+### 1. Collect OCIDs and namespace
+
+```bash
+oci iam compartment list --query 'data[0]."compartment-id"' --raw-output
+oci iam region list --query 'data[*].name' --raw-output
+oci os ns get  # Get object storage namespace for OCIR
+```
+
+### 2. Configure Terraform
+
+```bash
 cd digital-wallet-iac
 cp terraform.tfvars.example terraform.tfvars
-# (terraform.tfvars is gitignored — secrets stay local)
+# Edit with your OCIDs, SSH key, JWT secret, admin password
+```
 
+### 3. Provision infrastructure
+
+```bash
 terraform init
-terraform validate
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
-## CI/CD — GitHub Actions
+### 4. Build and push Docker images to OCIR
 
-A workflow is provided at `.github/workflows/deploy-infra.yml` that:
+```bash
+# Login to OCIR
+docker login ${OCI_REGION}.ocir.io --username ${OBJECT_STORAGE_NS}/${OCI_USERNAME}
+# (enter your Auth Token as password)
 
-1. **Validates** — `terraform fmt`, `init`, `validate` on every PR/push
-2. **Plans** — `terraform plan` with Azure OIDC authentication
-3. **Applies** — `terraform apply` on push to `main` (requires environment approval)
+# Build and push backend
+docker build -t digital-wallet-backend ./digital-wallet-backend
+docker tag digital-wallet-backend ${REGION}.ocir.io/${NS}/digital-wallet-backend:latest
+docker push ${REGION}.ocir.io/${NS}/digital-wallet-backend:latest
 
-### GitHub Secrets (sensitive)
+# Build and push frontend
+docker build -t digital-wallet-frontend --build-arg VITE_API_BASE_URL=/api ./digital-wallet-ui
+docker tag digital-wallet-frontend ${REGION}.ocir.io/${NS}/digital-wallet-frontend:latest
+docker push ${REGION}.ocir.io/${NS}/digital-wallet-frontend:latest
+```
 
-| Secret | Purpose |
-|--------|---------|
-| `TFE_TOKEN` | Terraform Cloud API token (for remote state) |
-| `AZURE_CLIENT_ID` | Service principal client ID (OIDC federated credential) |
-| `AZURE_TENANT_ID` | Azure AD tenant ID |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+### 5. Deploy on the VM
 
-### GitHub Variables (non-sensitive)
+```bash
+VM_IP=$(terraform output -raw vm_public_ip)
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `TF_CLOUD_ORGANIZATION` | — | Terraform Cloud organization name |
-| `TF_CLOUD_WORKSPACE` | `digital-wallet-iac` | Terraform Cloud workspace name |
-| `TF_RESOURCE_PREFIX` | `dw` | Terraform `resource_prefix` var |
-| `TF_RESOURCE_GROUP_NAME` | `digital-wallet-rg` | Terraform `resource_group_name` var |
-| `TF_LOCATION` | `eastus` | Terraform `location` var |
-| `TF_ENVIRONMENT` | `dev` | GitHub environment name |
+ssh opc@$VM_IP "cat > /opt/digital-wallet/.env << 'EOF'
+JWT_SECRET=your-secret
+JWT_EXPIRATION=86400000
+APP_ADMIN_USERNAME=admin
+APP_ADMIN_PASSWORD=your-password
+APP_ADMIN_EMAIL=admin@digitalwallet.com
+OCI_REGION=us-ashburn-1
+OCI_NAMESPACE=your-object-storage-ns
+BACKEND_IMAGE=us-ashburn-1.ocir.io/your-ns/digital-wallet-backend:latest
+FRONTEND_IMAGE=us-ashburn-1.ocir.io/your-ns/digital-wallet-frontend:latest
+EOF"
 
-### Setting up OIDC Federated Credentials
+ssh opc@$VM_IP "OCI_DOCKER_USERNAME='your-ns/your-email' OCI_AUTH_TOKEN='your-token' sudo -E /opt/digital-wallet/deploy.sh"
+```
 
-1. Create an Azure service principal:
-   ```powershell
-   az ad sp create-for-rbac --name "github-actions-digital-wallet" `
-     --role Contributor `
-     --json-auth false
-   ```
-2. Note the `clientId`, `tenantId`, and `subscriptionId`.
-3. In the Azure portal, go to your App Registration → **Certificates & secrets** → **Federated credentials**.
-4. Add a credential for GitHub Actions:
-   - **Entity type**: `Environment`
-   - **GitHub org**: your GitHub org/user
-   - **Repository**: `digital-wallet-iac`
-   - **Environment**: `dev`
-   - **Name**: `github-actions-dev`
-5. Repeat for a `production` environment if needed.
+### 6. Access
 
-### Setting up Terraform Cloud
+```bash
+terraform output application_url
+# http://<load-balancer-ip>
+```
 
-1. Create a free account at [app.terraform.io](https://app.terraform.io)
-2. Create an organization and note the name
-3. Generate a **Team API token** (Settings → Teams → Create token)
-4. Add the token as `TFE_TOKEN` in GitHub Secrets
-5. Add the organization name as `TF_CLOUD_ORGANIZATION` in GitHub Variables
-6. The workspace (`digital-wallet-iac`) is created automatically on first `terraform init`
+## Docker Images
+
+All images are stored in **OCI Container Registry (OCIR)**:
+
+| Image | OCIR URL | Base | Purpose |
+|---|---|---|---|
+| Backend | `<region>.ocir.io/<ns>/digital-wallet-backend` | `eclipse-temurin:25-jre` | Spring Boot REST API on port 8080 |
+| Frontend | `<region>.ocir.io/<ns>/digital-wallet-frontend` | `nginx:alpine` | Serves React SPA, proxies `/api` to backend |
+
+Build locally:
+```bash
+docker build -t digital-wallet-backend ./digital-wallet-backend
+docker build -t digital-wallet-frontend --build-arg VITE_API_BASE_URL=/api ./digital-wallet-ui
+```
+
+Run locally with Docker Compose (from project root):
+```bash
+cp .env.example .env  # Edit with your secrets
+docker compose up -d
+# Frontend: http://localhost:80
+# Backend:  http://localhost:8080/api
+# MongoDB:  mongodb://localhost:27017
+```
+
+## Cost Breakdown
+
+| Service | Plan | Cost |
+|---|---|---|
+| Compute | VM.Standard.A1.Flex (Always Free) | \$0 |
+| Load Balancer | Flexible 10 Mbps (Always Free) | \$0 |
+| Object Storage + OCIR | Standard + Container Registry (always free) | \$0 |
+| VCN / Networking | Included | \$0 |
+| Terraform Cloud | Free tier | \$0 |
+| **Total** | | **\$0/month** |
+
+## CI/CD Pipeline
+
+The GitHub Actions workflow (`deploy-infra.yml`) has three stages:
+
+1. **build-and-push** — Builds backend + frontend Docker images and pushes to OCIR
+2. **deploy-infra** — Provisions/updates OCI infrastructure via Terraform
+3. **deploy-apps** — SSHs into VM, writes `.env` with OCIR image tags + OCIR auth, runs `deploy.sh`
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|---|---|
+| `OCI_TENANCY_OCID` | Tenancy OCID |
+| `OCI_COMPARTMENT_OCID` | Compartment OCID (usually tenancy OCID) |
+| `OCI_SSH_PUBLIC_KEY` | SSH public key for VM |
+| `OCI_SSH_PRIVATE_KEY` | SSH private key for CI/CD deployment |
+| `OCI_DOCKER_USERNAME` | OCIR username: `<object-storage-ns>/<oci-username>` |
+| `OCI_AUTH_TOKEN` | Auth token generated in OCI Console for your user |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| `APP_ADMIN_PASSWORD` | Admin user password |
+| `TFE_TOKEN` | Terraform Cloud API token |
+
+### Required GitHub Variables
+
+| Variable | Description |
+|---|---|
+| `OCI_REGION` | OCI home region (e.g. `us-ashburn-1`) |
+| `OCI_OBJECT_STORAGE_NAMESPACE` | OCI object storage namespace (get via `oci os ns get`) |
+
+### Finding your OCIR username and namespace
+
+```bash
+# Object Storage Namespace
+oci os ns get
+
+# OCIR Docker username format: <namespace>/<oci-username>
+# e.g. "axbcyz123abc/john.doe@example.com"
+```
 
 ## Limitations
 
-- **App Service F1**: 60 CPU min/day quota. Cold start ~30–60s. No always-on — app goes idle after ~20 min.
-- **Cosmos DB Free Tier**: Only 1 free account per subscription. Publicly accessible (connection string is auth boundary).
-- **Static Web Apps Free**: 500 MB storage, 100 GB bandwidth. Connected source repo for CI is optional.
-- **Log Analytics**: 30-day retention, 5 GB/mo free ingestion.
+- **Compute reboot**: OCI may reclaim or reboot Always Free instances during maintenance
+- **Load Balancer**: 10 Mbps bandwidth limit
+- **Storage**: 200 GB total boot + block volume across all Always Free instances
+- **Cold starts**: VM may need ~2 minutes to fully boot after provisioning
+- **Always Free**: Resources must be in your **home region**
 
-Upgrade path: B1 ($54.75/mo) for App Service, S1 ($73/mo) + Private Endpoint for production networking.
+## Cleanup
+
+```bash
+cd digital-wallet-iac
+terraform destroy -auto-approve
+```
+
+Images in OCIR must be deleted separately via OCI Console or CLI.

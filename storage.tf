@@ -1,7 +1,13 @@
-resource "azurerm_static_web_app" "frontend" {
-  name                = local.frontend_static_app_name
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = "eastus2"
+resource "oci_objectstorage_bucket" "main" {
+  compartment_id = var.compartment_ocid
+  namespace      = data.oci_objectstorage_namespace.ns.namespace
+  name           = "${local.display_name}-artifacts"
+  access_type    = "NoPublicAccess"
+  storage_tier   = "Standard"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
+}
+
+data "oci_objectstorage_namespace" "ns" {
+  compartment_id = var.compartment_ocid
 }

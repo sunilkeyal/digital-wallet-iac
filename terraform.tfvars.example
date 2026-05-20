@@ -1,15 +1,27 @@
-# Example Terraform variables for the digital wallet Azure infrastructure
-# Copy this file to terraform.tfvars and fill in your values.
-# terraform.tfvars is gitignored to prevent leaking secrets.
+# Required: OCI credentials
+tenancy_ocid       = "ocid1.tenancy.oc1..aaaaaaaa..."
+compartment_ocid   = "ocid1.tenancy.oc1..aaaaaaaa..."  # Usually your tenancy OCID
+region             = "us-ashburn-1"                   # Must be your home region for Free Tier
 
-resource_prefix         = "digitalwallet"
-resource_group_name     = "digital-wallet-rg"
-location                = "eastus"
-backend_port            = 8080
+# Required: SSH key for VM access
+ssh_public_key = "ssh-ed25519 AAAA..."
 
-# Optional additional tags
+# Required: JWT secret (at least 32 chars)
+jwt_secret = "a-very-long-secret-key-at-least-32-characters-long"
+
+# Required: Admin password
+app_admin_password = "your-admin-password"
+
+# Optional overrides
+# name_prefix              = "dw"
+# availability_domain_index = 0
+# jwt_expiration            = "86400000"
+# app_admin_username        = "admin"
+# app_admin_email           = "admin@digitalwallet.com"
+# docker_image_tag          = "latest"
+
+# Optional tags
 # tags = {
-#   owner        = "team@example.com"
-#   cost-center  = "12345"
-#   environment  = "development"
+#   owner       = "team@example.com"
+#   cost-center = "12345"
 # }
