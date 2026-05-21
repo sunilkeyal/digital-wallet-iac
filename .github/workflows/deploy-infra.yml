@@ -125,7 +125,16 @@ jobs:
       - name: Terraform apply
         run: terraform apply -auto-approve
 
+      - name: Terraform output
+        if: always()
+        run: terraform output || echo "No outputs available yet"
+
       - name: Upload Terraform state to OCI
+        if: always()
         run: |
-          oci os object put --bucket-name digital-wallet-tfstate \
-            --name terraform.tfstate --file terraform.tfstate --force
+          if [ -f terraform.tfstate ]; then
+            oci os object put --bucket-name digital-wallet-tfstate \
+              --name terraform.tfstate --file terraform.tfstate --force
+          else
+            echo "No state file to upload"
+          fi
