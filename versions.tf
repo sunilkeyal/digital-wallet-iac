@@ -1,12 +1,8 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  backend "remote" {
-    hostname     = "app.terraform.io"
-    organization = "digital-wallet"
-    workspaces {
-      name = "digital-wallet-iac"
-    }
+  backend "s3" {
+    key = "terraform/state"
   }
 
   required_providers {
