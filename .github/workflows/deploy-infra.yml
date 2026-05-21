@@ -23,17 +23,18 @@ jobs:
 
       - name: Configure OCI CLI credentials
         run: |
-          mkdir -p ~/.oci
-          cat > ~/.oci/config << 'OCICONFIG'
+          mkdir -p $HOME/.oci
+          cat > $HOME/.oci/config << OCIEOF
           [DEFAULT]
           user=${{ secrets.OCI_USER_OCID }}
           fingerprint=${{ secrets.OCI_FINGERPRINT }}
           tenancy=${{ secrets.OCI_TENANCY_OCID }}
           region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
-          key_file=~/.oci/oci_api_key.pem
-          OCICONFIG
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
-          chmod 600 ~/.oci/oci_api_key.pem
+          key_file=$HOME/.oci/oci_api_key.pem
+          OCIEOF
+          printf '%s\n' '${{ secrets.OCI_PRIVATE_KEY }}' > $HOME/.oci/oci_api_key.pem
+          chmod 600 $HOME/.oci/oci_api_key.pem
+          echo "OCI config created"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
