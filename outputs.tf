@@ -9,12 +9,12 @@ output "vm_private_ip" {
 }
 
 output "load_balancer_public_ip" {
-  value       = oci_load_balancer_load_balancer.main.ip_addresses[0].ip_address
+  value       = oci_load_balancer_load_balancer.main.ip_addresses
   description = "Public IP of the load balancer (the application URL)."
 }
 
 output "application_url" {
-  value       = "http://${oci_load_balancer_load_balancer.main.ip_addresses[0].ip_address}"
+  value       = "http://${oci_load_balancer_load_balancer.main.ip_addresses}"
   description = "The public URL for the application."
 }
 
