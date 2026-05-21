@@ -90,6 +90,8 @@ jobs:
           echo "OCI_TENANCY_OCID length: ${#OCI_TENANCY_OCID}"
           echo "OCI_USER_OCID length: ${#OCI_USER_OCID}"
           echo "OCI_FINGERPRINT=$OCI_FINGERPRINT"
+          echo "TF_VAR_compartment_ocid length: ${#TF_VAR_compartment_ocid}"
+          echo "TF_VAR_region=$TF_VAR_region"
           ls -la "$OCI_PRIVATE_KEY_PATH"
 
       - name: Terraform init
