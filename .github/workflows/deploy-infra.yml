@@ -10,9 +10,6 @@ env:
   TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
   TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
   TF_VAR_region: ${{ vars.OCI_REGION || 'us-ashburn-1' }}
-  TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
-  TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
-  TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
   TF_VAR_ssh_public_key: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
   TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
   TF_VAR_app_admin_password: ${{ secrets.APP_ADMIN_PASSWORD }}
@@ -23,6 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure OCI CLI credentials
+        run: |
+          mkdir -p ~/.oci
+          cat > ~/.oci/config << 'OCICONFIG'
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
+          key_file=~/.oci/oci_api_key.pem
+          OCICONFIG
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

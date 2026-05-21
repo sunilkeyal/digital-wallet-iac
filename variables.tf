@@ -13,24 +13,6 @@ variable "region" {
   description = "OCI region identifier (e.g. us-ashburn-1, eu-frankfurt-1). Must be your home region for Always Free eligibility."
 }
 
-variable "user_ocid" {
-  type        = string
-  sensitive   = true
-  description = "OCID of the OCI user with API key access."
-}
-
-variable "fingerprint" {
-  type        = string
-  sensitive   = true
-  description = "Fingerprint of the OCI API key."
-}
-
-variable "private_key" {
-  type        = string
-  sensitive   = true
-  description = "Private key content for the OCI API key."
-}
-
 variable "name_prefix" {
   type        = string
   default     = "dw"

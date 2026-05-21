@@ -3,15 +3,6 @@ tenancy_ocid       = "ocid1.tenancy.oc1..aaaaaaaa..."
 compartment_ocid   = "ocid1.tenancy.oc1..aaaaaaaa..."  # Usually your tenancy OCID
 region             = "us-ashburn-1"                   # Must be your home region for Free Tier
 
-# Required: OCI API key auth (for the OCI provider)
-user_ocid    = "ocid1.user.oc1..aaaaaaa..."
-fingerprint  = "71:66:1e:e2:bc:3b:89:2a:2c:ba:bc:c4:7b:f8:55:e9"
-private_key  = <<-EOT
------BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ...
------END PRIVATE KEY-----
-EOT
-
 # Required: SSH key for VM access
 ssh_public_key = "ssh-ed25519 AAAA..."
 
