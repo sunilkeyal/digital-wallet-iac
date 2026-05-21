@@ -14,6 +14,7 @@ env:
   TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
   TF_VAR_app_admin_password: ${{ secrets.APP_ADMIN_PASSWORD }}
   TF_VAR_name_prefix: ${{ vars.TF_VAR_name_prefix || 'dw' }}
+  TF_VAR_availability_domain_index: ${{ vars.OCI_AD_INDEX || '0' }}
 
 jobs:
   deploy-infra:
