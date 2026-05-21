@@ -108,6 +108,13 @@ jobs:
       - name: Terraform init
         run: terraform init
 
+      - name: Clean stale load balancer from state
+        run: |
+          terraform state rm oci_load_balancer_load_balancer.main 2>/dev/null || true
+          terraform state rm oci_load_balancer_backend_set.main     2>/dev/null || true
+          terraform state rm oci_load_balancer_listener.http        2>/dev/null || true
+          terraform state rm oci_load_balancer_backend.main         2>/dev/null || true
+
       - name: Terraform apply
         run: terraform apply -auto-approve
 
