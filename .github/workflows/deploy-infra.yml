@@ -3,20 +3,6 @@ name: Deploy Infrastructure
 on:
   workflow_dispatch:
     inputs:
-      oci_region:
-        description: 'OCI region'
-        required: false
-        default: 'us-ashburn-1'
-        type: choice
-        options:
-          - us-ashburn-1
-          - eu-frankfurt-1
-          - ap-mumbai-1
-          - ap-seoul-1
-          - sa-saopaulo-1
-          - ap-tokyo-1
-          - eu-paris-1
-          - ca-montreal-1
       availability_domain_index:
         description: 'Availability Domain index (0=AD-1, 1=AD-2, 2=AD-3)'
         required: false
@@ -33,7 +19,7 @@ permissions:
 env:
   TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
   TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
-  TF_VAR_region: ${{ inputs.oci_region || vars.OCI_REGION || 'us-ashburn-1' }}
+  TF_VAR_region: ${{ vars.OCI_REGION || 'us-ashburn-1' }}
   TF_VAR_ssh_public_key: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
   TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
   TF_VAR_app_admin_password: ${{ secrets.APP_ADMIN_PASSWORD }}
@@ -63,7 +49,7 @@ jobs:
           user=${{ secrets.OCI_USER_OCID }}
           fingerprint=${{ secrets.OCI_FINGERPRINT }}
           tenancy=${{ secrets.OCI_TENANCY_OCID }}
-          region=${{ inputs.oci_region || vars.OCI_REGION || 'us-ashburn-1' }}
+          region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
           key_file=$OCI_DIR/oci_api_key.pem" > "$OCI_DIR/config"
 
           printf '%s\n' "$OCI_PRIVATE_KEY" | tr -d '\r' > "$OCI_DIR/oci_api_key.pem"
@@ -88,7 +74,7 @@ jobs:
           echo "OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}" >> "$GITHUB_ENV"
           echo "OCI_USER_OCID=${{ secrets.OCI_USER_OCID }}" >> "$GITHUB_ENV"
           echo "OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT }}" >> "$GITHUB_ENV"
-          echo "OCI_REGION=${{ inputs.oci_region || vars.OCI_REGION || 'us-ashburn-1' }}" >> "$GITHUB_ENV"
+          echo "OCI_REGION=${{ vars.OCI_REGION || 'us-ashburn-1' }}" >> "$GITHUB_ENV"
           echo "OCI_PRIVATE_KEY_PATH=$OCI_DIR/oci_api_key.pem" >> "$GITHUB_ENV"
 
           pip install -q oci-cli
