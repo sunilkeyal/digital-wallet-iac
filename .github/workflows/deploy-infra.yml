@@ -50,12 +50,26 @@ jobs:
           echo "=== Key file (last line) ==="
           tail -1 "$OCI_DIR/oci_api_key.pem"
 
+          # Debug: raw key file inspection
+          python3 -c "
+import os
+with open(os.path.expanduser('$OCI_DIR/oci_api_key.pem'), 'rb') as f:
+    c = f.read()
+print('Bytes:', len(c))
+print('Has CRLF:', b'\r\n' in c)
+print('Has CR:', b'\r' in c)
+print('Starts with:', c[:50])
+print('Ends with:', c[-30:])
+lines = c.count(b'\n')
+print('Lines:', lines)
+"
+
           # Set Terraform OCI provider env vars
           echo "OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}" >> "$GITHUB_ENV"
           echo "OCI_USER_OCID=${{ secrets.OCI_USER_OCID }}" >> "$GITHUB_ENV"
           echo "OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT }}" >> "$GITHUB_ENV"
           echo "OCI_REGION=${{ vars.OCI_REGION || 'us-ashburn-1' }}" >> "$GITHUB_ENV"
-          echo "OCI_KEY_FILE=$OCI_DIR/oci_api_key.pem" >> "$GITHUB_ENV"
+          echo "OCI_PRIVATE_KEY_PATH=$OCI_DIR/oci_api_key.pem" >> "$GITHUB_ENV"
 
           pip install -q oci-cli
 
@@ -83,11 +97,11 @@ jobs:
         run: |
           echo "=== Env vars for Terraform ==="
           echo "OCI_REGION=$OCI_REGION"
-          echo "OCI_KEY_FILE=$OCI_KEY_FILE"
+          echo "OCI_PRIVATE_KEY_PATH=$OCI_PRIVATE_KEY_PATH"
           echo "OCI_TENANCY_OCID length: ${#OCI_TENANCY_OCID}"
           echo "OCI_USER_OCID length: ${#OCI_USER_OCID}"
           echo "OCI_FINGERPRINT=$OCI_FINGERPRINT"
-          ls -la "$OCI_KEY_FILE"
+          ls -la "$OCI_PRIVATE_KEY_PATH"
 
       - name: Terraform init
         run: terraform init
