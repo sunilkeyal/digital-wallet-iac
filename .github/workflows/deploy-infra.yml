@@ -25,40 +25,69 @@ jobs:
         env:
           OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
         run: |
-          mkdir -p $HOME/.oci
-          cat > $HOME/.oci/config << OCIEOF
-          [DEFAULT]
+          OCI_DIR="$HOME/.oci"
+          mkdir -p "$OCI_DIR"
+
+          printf '%s\n' "[DEFAULT]
           user=${{ secrets.OCI_USER_OCID }}
           fingerprint=${{ secrets.OCI_FINGERPRINT }}
           tenancy=${{ secrets.OCI_TENANCY_OCID }}
           region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
-          key_file=$HOME/.oci/oci_api_key.pem
-          OCIEOF
-          echo "$OCI_PRIVATE_KEY" > $HOME/.oci/oci_api_key.pem
-          chmod 600 $HOME/.oci/oci_api_key.pem
+          key_file=$OCI_DIR/oci_api_key.pem" > "$OCI_DIR/config"
 
-          # Set Terraform OCI provider env vars (these take precedence over config file)
-          echo "OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}" >> $GITHUB_ENV
-          echo "OCI_USER_OCID=${{ secrets.OCI_USER_OCID }}" >> $GITHUB_ENV
-          echo "OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT }}" >> $GITHUB_ENV
-          echo "OCI_REGION=${{ vars.OCI_REGION || 'us-ashburn-1' }}" >> $GITHUB_ENV
-          echo "OCI_PRIVATE_KEY<<PRIVEOF" >> $GITHUB_ENV
-          echo "$OCI_PRIVATE_KEY" >> $GITHUB_ENV
-          echo "PRIVEOF" >> $GITHUB_ENV
+          printf '%s\n' "$OCI_PRIVATE_KEY" > "$OCI_DIR/oci_api_key.pem"
+          chmod 600 "$OCI_DIR/oci_api_key.pem" "$OCI_DIR/config"
+
+          # Debug: verify files
+          echo "=== HOME ==="
+          echo "$HOME"
+          echo "=== Config file ==="
+          head -3 "$OCI_DIR/config"
+          echo "..."
+          tail -1 "$OCI_DIR/config"
+          echo "=== Key file (first line) ==="
+          head -1 "$OCI_DIR/oci_api_key.pem"
+          echo "=== Key file (last line) ==="
+          tail -1 "$OCI_DIR/oci_api_key.pem"
+
+          # Set Terraform OCI provider env vars
+          echo "OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}" >> "$GITHUB_ENV"
+          echo "OCI_USER_OCID=${{ secrets.OCI_USER_OCID }}" >> "$GITHUB_ENV"
+          echo "OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT }}" >> "$GITHUB_ENV"
+          echo "OCI_REGION=${{ vars.OCI_REGION || 'us-ashburn-1' }}" >> "$GITHUB_ENV"
+          echo "OCI_KEY_FILE=$OCI_DIR/oci_api_key.pem" >> "$GITHUB_ENV"
 
           pip install -q oci-cli
+
+      - name: Verify OCI CLI auth
+        run: |
+          echo "=== Testing OCI CLI auth ==="
+          oci os ns get || echo "OCI CLI auth FAILED"
+
+      - name: Create state bucket
+        run: |
           oci os bucket create --name digital-wallet-tfstate \
-            --compartment-id ${{ secrets.OCI_TENANCY_OCID }} 2>/dev/null || echo "Bucket ready"
+            --compartment-id ${{ secrets.OCI_TENANCY_OCID }} || echo "Bucket may already exist"
 
       - name: Download Terraform state from OCI
         run: |
           oci os object get --bucket-name digital-wallet-tfstate \
-            --name terraform.tfstate --file terraform.tfstate 2>/dev/null || echo "No existing state"
+            --name terraform.tfstate --file terraform.tfstate || echo "No existing state"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.0
+
+      - name: Debug env vars (non-sensitive)
+        run: |
+          echo "=== Env vars for Terraform ==="
+          echo "OCI_REGION=$OCI_REGION"
+          echo "OCI_KEY_FILE=$OCI_KEY_FILE"
+          echo "OCI_TENANCY_OCID length: ${#OCI_TENANCY_OCID}"
+          echo "OCI_USER_OCID length: ${#OCI_USER_OCID}"
+          echo "OCI_FINGERPRINT=$OCI_FINGERPRINT"
+          ls -la "$OCI_KEY_FILE"
 
       - name: Terraform init
         run: terraform init
