@@ -5,8 +5,8 @@ resource "oci_core_instance" "main" {
   shape               = "VM.Standard.A1.Flex"
 
   shape_config {
-    ocpus         = 1
-    memory_in_gbs = 6
+    ocpus         = 2
+    memory_in_gbs = 12
   }
 
   create_vnic_details {

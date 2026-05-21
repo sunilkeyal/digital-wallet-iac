@@ -122,8 +122,28 @@ jobs:
       - name: Terraform init
         run: terraform init
 
-      - name: Terraform apply
-        run: terraform apply -auto-approve
+      - name: Terraform apply (retry on capacity)
+        run: |
+          MAX_RETRIES=100
+          RETRY_DELAY=30
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES..."
+            terraform apply -auto-approve 2>&1 | tee /tmp/tf_output.txt
+            TF_EXIT=${PIPESTATUS[0]}
+            if [ $TF_EXIT -eq 0 ]; then
+              echo "Terraform apply succeeded!"
+              exit 0
+            fi
+            if grep -q "Out of host capacity" /tmp/tf_output.txt; then
+              echo "Out of host capacity. Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            else
+              echo "Non-retryable error. Exiting."
+              exit $TF_EXIT
+            fi
+          done
+          echo "Exhausted all $MAX_RETRIES retries."
+          exit 1
 
       - name: Upload Terraform state to OCI
         run: |
