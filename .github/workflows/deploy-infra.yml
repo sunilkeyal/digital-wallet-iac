@@ -51,18 +51,18 @@ jobs:
           tail -1 "$OCI_DIR/oci_api_key.pem"
 
           # Debug: raw key file inspection
-          python3 -c "
+          python3 << PYEOF
 import os
-with open(os.path.expanduser('$OCI_DIR/oci_api_key.pem'), 'rb') as f:
+home = os.environ['HOME']
+with open(home + '/.oci/oci_api_key.pem', 'rb') as f:
     c = f.read()
 print('Bytes:', len(c))
-print('Has CRLF:', b'\r\n' in c)
-print('Has CR:', b'\r' in c)
+print('Has CRLF:', b'\\r\\n' in c)
+print('Has standalone CR:', b'\\r' in c and b'\\r\\n' not in c)
 print('Starts with:', c[:50])
 print('Ends with:', c[-30:])
-lines = c.count(b'\n')
-print('Lines:', lines)
-"
+print('Lines:', c.count(b'\\n'))
+PYEOF
 
           # Set Terraform OCI provider env vars
           echo "OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}" >> "$GITHUB_ENV"
