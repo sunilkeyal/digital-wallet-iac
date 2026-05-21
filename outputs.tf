@@ -8,19 +8,9 @@ output "vm_private_ip" {
   description = "Private IP of the compute instance."
 }
 
-output "load_balancer_public_ip" {
-  value       = oci_load_balancer_load_balancer.main.ip_address_details[0].ip_address
-  description = "Public IP of the load balancer (the application URL)."
-}
-
 output "application_url" {
-  value       = "http://${oci_load_balancer_load_balancer.main.ip_address_details[0].ip_address}"
+  value       = "http://${oci_core_instance.main.public_ip}"
   description = "The public URL for the application."
-}
-
-output "storage_bucket_name" {
-  value       = oci_objectstorage_bucket.main.name
-  description = "Name of the OCI Object Storage bucket for deployment artifacts."
 }
 
 output "availability_domain" {

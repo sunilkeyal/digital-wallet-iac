@@ -5,5 +5,4 @@ provider "oci" {
 provider "random" {
 }
 
-provider "tls" {
-}
+

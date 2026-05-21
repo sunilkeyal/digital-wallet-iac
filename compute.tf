@@ -59,7 +59,7 @@ resource "oci_core_network_security_group_security_rule" "compute_ingress_http" 
   direction                 = "INGRESS"
   protocol                  = "6"
   source                    = "0.0.0.0/0"
-  description               = "Allow HTTP from anywhere (via LB health checks)"
+  description               = "Allow HTTP"
   tcp_options {
     destination_port_range {
       min = 80
